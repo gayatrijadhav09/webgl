@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{
+    margin:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="myCanvas" width="500" height="500"></canvas>
+
+<script>
+
+const canvas = document.getElementById("myCanvas");
+const gl = canvas.getContext("webgl");
+
+if(!gl){
+    alert("WebGL not supported");
+}
+
+// White Background
+gl.clearColor(1.0,1.0,1.0,1.0);
+gl.clear(gl.COLOR_BUFFER_BIT);
+
+// Vertex Shader
+const vs = `
+attribute vec2 coordinates;
+
+void main()
+{
+    gl_Position = vec4(coordinates,0.0,1.0);
+}
+`;
+
+// Fragment Shader
+const fs = `
+precision mediump float;
+
+uniform vec4 uColor;
+
+void main()
+{
+    gl_FragColor = uColor;
+}
+`;
+
+function createShader(type,source)
+{
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader,source);
+    gl.compileShader(shader);
+    return shader;
+}
+
+const vertexShader = createShader(gl.VERTEX_SHADER,vs);
+const fragmentShader = createShader(gl.FRAGMENT_SHADER,fs);
+
+const program = gl.createProgram();
+gl.attachShader(program,vertexShader);
+gl.attachShader(program,fragmentShader);
+gl.linkProgram(program);
+gl.useProgram(program);
+
+// Cake Layers
+const vertices = new Float32Array([
+
+    // Layer 1
+    -0.30,-0.95,
+     0.30,-0.95,
+     0.30,-0.75,
+    -0.30,-0.75,
+
+    // Layer 2
+    -0.22,-0.75,
+     0.22,-0.75,
+     0.22,-0.55,
+    -0.22,-0.55,
+
+    // Layer 3
+    -0.14,-0.55,
+     0.14,-0.55,
+     0.14,-0.35,
+    -0.14,-0.35,
+
+    // Layer 4
+    -0.07,-0.35,
+     0.07,-0.35,
+     0.07,-0.15,
+    -0.07,-0.15
+
+]);
+
+const buffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.STATIC_DRAW);
+
+const coord = gl.getAttribLocation(program,"coordinates");
+gl.vertexAttribPointer(coord,2,gl.FLOAT,false,0,0);
+gl.enableVertexAttribArray(coord);
+
+// Color Location
+const colorLoc = gl.getUniformLocation(program,"uColor");
+
+// Layer 1 - Yellow
+gl.uniform4f(colorLoc,1.0,1.0,0.0,1.0);
+gl.drawArrays(gl.TRIANGLE_FAN,0,4);
+
+// Layer 2 - Blue
+gl.uniform4f(colorLoc,0.0,0.0,1.0,1.0);
+gl.drawArrays(gl.TRIANGLE_FAN,4,4);
+
+// Layer 3 - Green
+gl.uniform4f(colorLoc,0.0,1.0,0.0,1.0);
+gl.drawArrays(gl.TRIANGLE_FAN,8,4);
+
+// Layer 4 - Red
+gl.uniform4f(colorLoc,1.0,0.0,0.0,1.0);
+gl.drawArrays(gl.TRIANGLE_FAN,12,4);
+
+</script>
+
+</body>
+</html>
