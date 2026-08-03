@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Rectangle</title>
+
+<style>
+body{
+    margin:20px;
+    font-family:Arial;
+}
+
+.container{
+    display:flex;
+    gap:30px;
+}
+
+canvas{
+    border:2px solid black;
+}
+
+.controls{
+    text-align:left;
+}
+
+button{
+    padding:8px 15px;
+    margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<canvas id="myCanvas" width="500" height="500"></canvas>
+
+<div class="controls">
+
+
+Layers :
+<input type="number" id="layers" min="1" value="4">
+<br><br>
+
+Layer No :
+<input type="number" id="layerNo" min="1" value="1">
+<br><br>
+
+Color :
+<input type="color" id="picker" value="#ff0000">
+<br><br>
+
+<button onclick="setColor()">Set Color</button>
+
+<br><br>
+
+<button onclick="drawrec()">Draw Rectangle</button>
+
+</div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("myCanvas");
+const gl = canvas.getContext("webgl");
+
+const vs = `
+attribute vec2 coordinates;
+
+void main()
+{
+    gl_Position = vec4(coordinates,0.0,1.0);
+}
+`;
+
+const fs = `
+precision mediump float;
+
+uniform vec4 uColor;
+
+void main()
+{
+    gl_FragColor = uColor;
+}
+`;
+
+function createShader(type,source)
+{
+    const shader = gl.createShader(type);
+
+    gl.shaderSource(shader,source);
+
+    gl.compileShader(shader);
+
+    return shader;
+}
+
+const vertexShader =
+createShader(gl.VERTEX_SHADER,vs);
+
+const fragmentShader =
+createShader(gl.FRAGMENT_SHADER,fs);
+
+const program = gl.createProgram();
+
+gl.attachShader(program,vertexShader);
+gl.attachShader(program,fragmentShader);
+
+gl.linkProgram(program);
+
+gl.useProgram(program);
+
+const colorLoc =
+gl.getUniformLocation(program,"uColor");
+
+let colors = [];
+
+function hexToRgb(hex)
+{
+    let r =
+    parseInt(hex.substring(1,3),16)/255;
+
+    let g =
+    parseInt(hex.substring(3,5),16)/255;
+
+    let b =
+    parseInt(hex.substring(5,7),16)/255;
+
+    return [r,g,b];
+}
+
+function setColor()
+{
+    let n =
+    parseInt(document.getElementById("layers").value);
+
+    while(colors.length < n)
+    {
+        colors.push([1,0,0]);
+    }
+
+    let layer =
+    parseInt(document.getElementById("layerNo").value)-1;
+
+    if(layer >= 0 && layer < n)
+    {
+        colors[layer] =
+        hexToRgb(
+        document.getElementById("picker").value);
+    }
+}
+
+function drawrec()
+{
+    let n =
+    parseInt(document.getElementById("layers").value);
+
+    while(colors.length < n)
+    {
+        colors.push([1,0,0]);
+    }
+
+    let vertices = [];
+
+    let bottom = -0.95;
+
+    let totalHeight = 1.6;
+
+    let h = totalHeight / n;
+
+    let maxWidth = 0.90;
+
+    let minWidth = 0.15;
+
+    for(let i=0;i<n;i++)
+    {
+        let width;
+
+        if(n==1)
+        {
+            width=maxWidth;
+        }
+        else
+        {
+            width =
+            maxWidth -
+            ((maxWidth-minWidth)/(n-1))*i;
+        }
+
+        let left = -width/2;
+        let right = width/2;
+
+        let top = bottom + h;
+
+        vertices.push(
+            left,bottom,
+            right,bottom,
+            right,top,
+            left,top
+        );
+
+        bottom = top;
+    }
+
+    const buffer = gl.createBuffer();
+
+    gl.bindBuffer(
+    gl.ARRAY_BUFFER,
+    buffer);
+
+    gl.bufferData(
+    gl.ARRAY_BUFFER,
+    new Float32Array(vertices),
+    gl.STATIC_DRAW);
+
+    const coord =
+    gl.getAttribLocation(
+    program,
+    "coordinates");
+
+    gl.vertexAttribPointer(
+    coord,
+    2,
+    gl.FLOAT,
+    false,
+    0,
+    0);
+
+    gl.enableVertexAttribArray(coord);
+
+    gl.clearColor(
+    1.0,
+    1.0,
+    1.0,
+    1.0);
+
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    for(let i=0;i<n;i++)
+    {
+        gl.uniform4f(
+        colorLoc,
+        colors[i][0],
+        colors[i][1],
+        colors[i][2],
+        1.0);
+
+        gl.drawArrays(
+        gl.TRIANGLE_FAN,
+        i*4,
+        4);
+    }
+}
+
+drawrec();
+
+</script>
+
+</body>
+</html>
