@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title> Animation</title>
+<style>
+canvas{
+border:1px solid black;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c" width="600" height="500"></canvas>
+
+<script>
+
+const canvas = document.getElementById("c");
+const gl = canvas.getContext("webgl");
+
+const vs = `
+attribute vec2 p;
+
+void main()
+{
+    gl_Position = vec4(p,0.0,1.0);
+}
+`;
+
+const fs = `
+precision mediump float;
+
+uniform vec4 color;
+
+void main()
+{
+    gl_FragColor = color;
+}
+`;
+
+function shader(type,src)
+{
+    let s = gl.createShader(type);
+    gl.shaderSource(s,src);
+    gl.compileShader(s);
+    return s;
+}
+
+let v = shader(gl.VERTEX_SHADER,vs);
+let f = shader(gl.FRAGMENT_SHADER,fs);
+
+let prog = gl.createProgram();
+
+gl.attachShader(prog,v);
+gl.attachShader(prog,f);
+
+gl.linkProgram(prog);
+
+gl.useProgram(prog);
+
+let pos = gl.getAttribLocation(prog,"p");
+let col = gl.getUniformLocation(prog,"color");
+
+let gx = 0.20;
+let gy = -0.80;
+
+let bx = 0.70;
+let by = -0.80;
+
+let gtx = -0.225;
+let gty = -0.60;
+
+let btx = -0.15;
+let bty = -0.40;
+
+function rect(x,y,w,h,r,g,b)
+{
+    let vertices = [
+
+        x,y,
+        x+w,y,
+        x+w,y+h,
+        x,y+h
+
+    ];
+
+    let buf = gl.createBuffer();
+
+    gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(vertices),
+        gl.STATIC_DRAW
+    );
+
+    gl.vertexAttribPointer(
+        pos,
+        2,
+        gl.FLOAT,
+        false,
+        0,
+        0
+    );
+
+    gl.enableVertexAttribArray(pos);
+
+    gl.uniform4f(col,r,g,b,1);
+
+    gl.drawArrays(
+        gl.TRIANGLE_FAN,
+        0,
+        4
+    );
+}
+
+function animate()
+{
+    gl.clearColor(1,1,1,1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Red
+    rect(-0.30,-0.80,0.60,0.20,1,0,0);
+
+    // Green
+    rect(gx,gy,0.45,0.20,0,1,0);
+
+    // Blue
+    rect(bx,by,0.30,0.20,0,0,1);
+
+    if(gx > gtx)
+    {
+        gx -= 0.005;
+        gy += 0.0023;
+    }
+    else
+    {
+        gx = gtx;
+        gy = gty;
+
+        if(bx > btx)
+        {
+            bx -= 0.01;
+            by += 0.004;
+        }
+        else
+        {
+            bx = btx;
+            by = bty;
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+animate();
+
+</script>
+
+</body>
+</html>
