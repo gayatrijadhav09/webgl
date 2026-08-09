@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Tower Of Hanoi</title>
+
+<style>
+canvas{
+    border:2px solid black;
+}
+
+.labels{
+    width:800px;
+    display:flex;
+    justify-content:space-around;
+    font-size:22px;
+    font-weight:bold;
+    margin-top:10px;
+}
+</style>
+</head>
+
+<body>
+
+Rectangles :
+<input type="number"
+       id="count"
+       value="3"
+       min="1">
+
+<button onclick="createRectangles()">
+Create
+</button>
+
+<br><br>
+
+Move :
+
+<input type="text"
+       id="moveInput"
+       placeholder="P1,P2">
+
+<button onclick="startMove()">
+Move
+</button>
+
+<br><br>
+
+<canvas id="c"
+        width="800"
+        height="500">
+</canvas>
+
+<div class="labels">
+    <span>P1</span>
+    <span>P2</span>
+    <span>P3</span>
+</div>
+<script>
+
+const canvas =
+document.getElementById("c");
+
+const gl =
+canvas.getContext("webgl");
+
+const vs = `
+attribute vec2 aPosition;
+uniform vec2 uTranslation;
+
+void main()
+{
+    gl_Position =
+    vec4(
+        aPosition + uTranslation,
+        0.0,
+        1.0
+    );
+}
+`;
+
+const fs = `
+precision mediump float;
+
+uniform vec4 uColor;
+
+void main()
+{
+    gl_FragColor = uColor;
+}
+`;
+
+function createShader(type,source)
+{
+    const shader =
+    gl.createShader(type);
+
+    gl.shaderSource(shader,source);
+
+    gl.compileShader(shader);
+
+    return shader;
+}
+
+const vertexShader =
+createShader(gl.VERTEX_SHADER,vs);
+
+const fragmentShader =
+createShader(gl.FRAGMENT_SHADER,fs);
+
+const program =
+gl.createProgram();
+
+gl.attachShader(program,vertexShader);
+gl.attachShader(program,fragmentShader);
+
+gl.linkProgram(program);
+
+gl.useProgram(program);
+	const buffer =
+gl.createBuffer();
+
+gl.bindBuffer(
+gl.ARRAY_BUFFER,
+buffer
+);
+
+const aPosition =
+gl.getAttribLocation(
+program,
+"aPosition"
+);
+
+gl.enableVertexAttribArray(
+aPosition
+);
+
+gl.vertexAttribPointer(
+aPosition,
+2,
+gl.FLOAT,
+false,
+0,
+0
+);
+
+const uTranslation =
+gl.getUniformLocation(
+program,
+"uTranslation"
+);
+
+const uColor =
+gl.getUniformLocation(
+program,
+"uColor"
+);
+
+function drawRectangle(
+x,y,w,h,color
+)
+{
+    const vertices = [
+
+        -w/2,-h/2,
+         w/2,-h/2,
+        -w/2, h/2,
+
+        -w/2, h/2,
+         w/2,-h/2,
+         w/2, h/2
+    ];
+
+    gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array(vertices),
+        gl.STATIC_DRAW
+    );
+
+    gl.uniform2f(
+        uTranslation,
+        x,
+        y
+    );
+
+    gl.uniform4fv(
+        uColor,
+        color
+    );
+
+    gl.drawArrays(
+        gl.TRIANGLES,
+        0,
+        6
+    );
+}
+	const towers =
+{
+    P1:-0.65,
+    P2: 0.00,
+    P3: 0.65
+};
+
+let disks = [];
+
+let pegs =
+{
+    P1:[],
+    P2:[],
+    P3:[]
+};
+
+let activeDisk = -1;
+
+let sourcePeg = "";
+let targetPeg = "";
+
+let state = "idle";
+let moveList=[];
+let moveIndex=0;
+	function createRectangles()
+{
+    disks = [];
+
+    pegs =
+    {
+        P1:[],
+        P2:[],
+        P3:[]
+    };
+
+    const count =
+    parseInt(
+        document
+        .getElementById("count")
+        .value
+    );
+
+    const colors =
+    [
+        [1,0,0,1],
+        [0,1,0,1],
+        [0,0,1,1],
+        [1,1,0,1],
+        [1,0,1,1],
+        [0,1,1,1]
+    ];
+
+    for(let i=0;i<count;i++)
+    {
+        disks.push(
+        {
+            width:0.60 - i*0.08,
+            x:towers.P1,
+            y:-0.60 + i*0.08,
+            color:colors[i%colors.length]
+        });
+
+        pegs.P1.push(i);
+    }
+}
+
+	function startMove()
+{
+    if(state !== "idle")
+        return;
+
+    if(moveList.length === 0)
+    {
+        let text =
+        document
+        .getElementById("moveInput")
+        .value
+        .toUpperCase();
+
+        moveList =
+        text.match(/\(P[123],P[123]\)/g);
+
+        if(!moveList)
+        {
+            alert("Invalid Input");
+            return;
+        }
+
+        moveIndex = 0;
+    }
+
+    if(moveIndex >= moveList.length)
+    {
+        moveList = [];
+        return;
+    }
+
+    let move =
+    moveList[moveIndex];
+
+    move =
+    move.replace("(","")
+        .replace(")","");
+
+    const p = move.split(",");
+
+    sourcePeg = p[0];
+    targetPeg = p[1];
+
+    if(pegs[sourcePeg].length === 0)
+    {
+        alert("Source Empty");
+        moveList = [];
+        return;
+    }
+
+    activeDisk =
+    pegs[sourcePeg]
+    [
+        pegs[sourcePeg].length - 1
+    ];
+
+    if(pegs[targetPeg].length > 0)
+    {
+        let topTargetDisk =
+        pegs[targetPeg]
+        [
+            pegs[targetPeg].length - 1
+        ];
+
+		   let movingWidth =
+disks[activeDisk].width;
+
+let targetWidth =
+disks[topTargetDisk].width;
+
+if(movingWidth > targetWidth)
+{
+    alert(
+    "Invalid Move\n\n" +
+    "A larger rectangle cannot be placed on a smaller rectangle"
+    );
+
+    moveList = [];
+    moveIndex = 0;
+    state = "idle";
+    return;
+}
+    }
+
+    moveIndex++;
+    state = "up";
+}
+
+
+	function animateDisk()
+{
+    if(state==="idle")
+        return;
+
+    const disk =
+    disks[activeDisk];
+
+    const targetX =
+    towers[targetPeg];
+
+    const level =
+    pegs[targetPeg].length;
+
+    const targetY =
+    -0.60 + level*0.08;
+
+    if(state==="up")
+    {
+        disk.y += 0.01;
+
+        if(disk.y >= 0.30)
+        {
+            state = "horizontal";
+        }
+    }
+
+    else if(state==="horizontal")
+    {
+        if(disk.x < targetX)
+        {
+            disk.x += 0.01;
+        }
+
+        else if(disk.x > targetX)
+        {
+            disk.x -= 0.01;
+        }
+
+        if(
+        Math.abs(
+        disk.x-targetX
+        ) < 0.02
+        )
+        {
+            disk.x = targetX;
+
+            state = "down";
+        }
+    }
+
+    else if(state==="down")
+    {
+        disk.y -= 0.01;
+
+        if(disk.y <= targetY)
+        {
+            disk.y = targetY;
+
+           pegs[sourcePeg].pop();
+ 
+pegs[targetPeg].push(activeDisk);
+
+state = "idle";
+
+if(moveIndex < moveList.length)
+
+	    {
+	    setTimeout(function()
+	    {
+
+    startMove();
+},200);
+	    }
+else
+{
+    moveList = [];
+		moveIndex=0;
+}
+        }
+    }
+}
+	function render()
+{
+    gl.clearColor(
+        1,1,1,1
+    );
+
+    gl.clear(
+        gl.COLOR_BUFFER_BIT
+    );
+
+    animateDisk();
+
+    for(let disk of disks)
+    {
+        drawRectangle(
+            disk.x,
+            disk.y,
+            disk.width,
+            0.08,
+            disk.color
+        );
+    }
+
+    requestAnimationFrame(
+        render
+    );
+}
+createRectangles();
+render();
+
+</script>
+
+</body>
+</html>
