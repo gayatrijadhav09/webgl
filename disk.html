@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="utf-8">
+<title>Disk</title>
+
+<style>
+
+body{
+    margin:0;
+    overflow:hidden;
+    background:#080c18;
+}
+
+canvas{
+    display:block;
+    width:100vw;
+    height:100vh;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<canvas id="glcanvas"></canvas>
+
+
+<script>
+
+
+const canvas=document.getElementById("glcanvas");
+
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+
+
+const gl=canvas.getContext("webgl");
+
+
+
+// Vertex Shader
+
+const vs=`
+
+attribute vec3 position;
+
+uniform float angle;
+
+
+void main()
+{
+
+float c=cos(angle);
+float s=sin(angle);
+
+
+// rotation
+
+float x=position.x*c-position.z*s;
+float z=position.x*s+position.z*c;
+
+
+
+// up down animation
+
+float move=sin(angle*2.0)*0.12;
+
+float y=position.y+move;
+
+
+
+// tilt view
+
+float tilt=0.6;
+
+
+float y2=y*cos(tilt)-z*sin(tilt);
+
+float z2=y*sin(tilt)+z*cos(tilt);
+
+
+
+gl_Position=
+vec4(
+x*0.8,
+y2*0.8,
+z2*0.8,
+1.0
+);
+
+
+}
+
+`;
+
+
+
+
+// Fragment Shader
+
+const fs=`
+
+precision mediump float;
+
+
+void main()
+{
+
+
+float shade=gl_FragCoord.y/600.0;
+
+
+gl_FragColor=
+vec4(
+0.15+shade*0.4,
+0.35+shade*0.4,
+0.85,
+1.0
+);
+
+
+}
+
+`;
+
+
+
+
+// create shader
+
+function shader(type,source)
+{
+
+let s=gl.createShader(type);
+
+gl.shaderSource(s,source);
+
+gl.compileShader(s);
+
+return s;
+
+}
+
+
+
+// Program
+
+const program=gl.createProgram();
+
+
+gl.attachShader(program,shader(gl.VERTEX_SHADER,vs));
+
+
+gl.attachShader(program,shader(gl.FRAGMENT_SHADER,fs));
+
+
+gl.linkProgram(program);
+
+gl.useProgram(program);
+
+
+
+
+
+//disk
+
+
+const vertices=[];
+
+
+const radius=0.40;
+
+const height=0.15;
+
+const slices=60;
+
+
+
+for(let i=0;i<slices;i++)
+{
+
+let a1=i*2*Math.PI/slices;
+
+let a2=(i+1)*2*Math.PI/slices;
+
+
+
+// TOP FACE
+
+vertices.push(
+0,
+height,
+0
+);
+
+
+vertices.push(radius*Math.cos(a1),height,radius*Math.sin(a1));
+
+
+vertices.push(radius*Math.cos(a2),height,radius*Math.sin(a2));
+
+
+
+
+// SIDE 1
+
+vertices.push(radius*Math.cos(a1),height,radius*Math.sin(a1));
+
+
+vertices.push(radius*Math.cos(a1),-height,radius*Math.sin(a1));
+
+
+vertices.push(radius*Math.cos(a2),height,radius*Math.sin(a2));
+
+
+
+
+// SIDE 2
+
+vertices.push(radius*Math.cos(a2),height,radius*Math.sin(a2));
+
+
+vertices.push(radius*Math.cos(a1),-height,radius*Math.sin(a1));
+
+
+vertices.push(radius*Math.cos(a2),-height,radius*Math.sin(a2));
+
+}
+
+
+
+// Buffer
+
+
+const buffer=gl.createBuffer();
+
+
+gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+
+
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),
+gl.STATIC_DRAW
+);
+
+
+
+
+
+// Attribute
+
+
+const pos=gl.getAttribLocation(program,"position");
+
+
+gl.vertexAttribPointer(
+pos,
+3,
+gl.FLOAT,
+false,
+0,
+0
+);
+
+
+gl.enableVertexAttribArray(pos);
+
+
+
+
+
+// Animation
+
+
+const angleLoc=gl.getUniformLocation(program,"angle");
+
+
+let angle=0;
+
+
+
+function draw()
+{
+
+angle+=0.01;
+
+
+
+gl.viewport(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+
+
+gl.clearColor(
+0.03,
+0.05,
+0.1,
+1
+);
+
+
+gl.clear(gl.COLOR_BUFFER_BIT);
+
+
+
+gl.uniform1f(angleLoc,angle);
+
+
+
+gl.drawArrays(gl.TRIANGLES,0,vertices.length/3);
+
+
+
+requestAnimationFrame(draw);
+
+}
+
+
+
+draw();
+
+
+
+</script>
+
+</body>
+
+</html>
