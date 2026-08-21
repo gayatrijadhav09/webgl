@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rotating Triangle</title>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+
+        canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+<canvas id="glcanvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("glcanvas");
+const gl = canvas.getContext("webgl");
+
+
+// ---------------- Vertex Shader ----------------
+
+const vertexShaderSource = `
+attribute vec2 a_position;
+
+uniform float u_angle;
+
+void main()
+{
+    float c = cos(u_angle);
+    float s = sin(u_angle);
+
+    float x = a_position.x * c - a_position.y * s;
+    float y = a_position.x * s + a_position.y * c;
+
+    gl_Position = vec4(x, y, 0.0, 1.0);
+}
+`;
+
+	//Fragment Shader
+
+const fragmentShaderSource = `
+precision mediump float;
+
+void main()
+{
+    gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+}
+`;
+
+
+//Create Shade
+
+function createShader(type, source)
+{
+    const shader = gl.createShader(type);
+
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    return shader;
+}
+
+
+// Create Program
+
+const vertexShader =
+    createShader(gl.VERTEX_SHADER, vertexShaderSource);
+
+const fragmentShader =
+    createShader(gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+const program = gl.createProgram();
+
+gl.attachShader(program, vertexShader);
+gl.attachShader(program, fragmentShader);
+
+gl.linkProgram(program);
+
+gl.useProgram(program);
+
+
+// Triangle Data
+
+const vertices = new Float32Array([
+     0.0,  0.5,
+    -0.5, -0.5,
+     0.5, -0.5
+]);
+
+
+
+
+const buffer = gl.createBuffer();
+
+gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+
+gl.bufferData(
+    gl.ARRAY_BUFFER,
+    vertices,
+    gl.STATIC_DRAW
+);
+
+
+//position Attribute 
+
+const positionLocation =
+    gl.getAttribLocation(program, "a_position");
+
+gl.enableVertexAttribArray(positionLocation);
+
+gl.vertexAttribPointer(
+    positionLocation,
+    2,
+    gl.FLOAT,
+    false,
+    0,
+    0
+);
+
+
+//Angle Uniform
+
+const angleLocation =
+    gl.getUniformLocation(program, "u_angle");
+
+
+//  Animation
+
+let angle = 0;
+
+function draw()
+{
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.uniform1f(angleLocation, angle);
+
+    gl.drawArrays(
+        gl.TRIANGLES,
+        0,
+        3
+    );
+
+    angle += 0.01;
+
+    requestAnimationFrame(draw);
+}
+
+draw();
+
+</script>
+
+</body>
+</html>
