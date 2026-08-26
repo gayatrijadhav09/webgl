@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="utf-8">
+<title>Two Floating 3D Podium</title>
+
+<style>
+
+body{
+    margin:0;
+    overflow:hidden;
+    background:#080c18;
+}
+
+canvas{
+    display:block;
+    width:100vw;
+    height:100vh;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<canvas id="glcanvas"></canvas>
+
+
+<script>
+
+
+const canvas=document.getElementById("glcanvas");
+
+canvas.width=innerWidth;
+canvas.height=innerHeight;
+
+
+const gl=canvas.getContext("webgl");
+
+
+
+// Vertex Shader
+
+const vs=`
+
+attribute vec3 position;
+attribute float objType;
+
+uniform float angle;
+
+
+void main()
+{
+
+float c=cos(angle);
+float s=sin(angle);
+
+
+// rotate
+
+float x=position.x*c-position.z*s;
+float z=position.x*s+position.z*c;
+
+
+
+// separate animation
+
+float move;
+
+
+if(objType < 0.5)
+{
+    move = sin(angle*2.0)*0.05;
+}
+else
+{
+    move = sin(angle*3.0)*0.08;
+}
+
+
+float y=position.y+move;
+
+
+
+// 3D view
+
+float tilt=0.9;
+
+
+float y2=y*cos(tilt)-z*sin(tilt);
+
+float z2=y*sin(tilt)+z*cos(tilt);
+
+
+
+gl_Position=
+vec4(
+x*0.8,
+y2*0.8,
+z2*0.8,
+1.0
+);
+
+
+}
+
+`;
+
+
+
+
+// Fragment Shader
+
+const fs=`
+
+precision mediump float;
+
+
+void main()
+{
+
+float shade=gl_FragCoord.y/700.0;
+
+
+gl_FragColor=
+vec4(
+0.2+shade*0.4,
+0.45+shade*0.3,
+0.9,
+1.0
+);
+
+}
+
+`;
+
+
+
+
+// shader function
+
+function shader(type,source)
+{
+
+let s=gl.createShader(type);
+
+gl.shaderSource(s,source);
+
+gl.compileShader(s);
+
+return s;
+
+}
+
+
+
+
+const program=gl.createProgram();
+
+
+gl.attachShader(
+program,
+shader(gl.VERTEX_SHADER,vs)
+);
+
+
+gl.attachShader(
+program,
+shader(gl.FRAGMENT_SHADER,fs)
+);
+
+
+gl.linkProgram(program);
+
+gl.useProgram(program);
+
+
+
+
+
+// Geometry
+
+const vertices=[];
+const types=[];
+
+
+
+function createCylinder(radius,height,offset,type)
+{
+
+const slices=60;
+
+
+for(let i=0;i<slices;i++)
+{
+
+let a1=i*2*Math.PI/slices;
+
+let a2=(i+1)*2*Math.PI/slices;
+
+
+
+// TOP
+
+
+vertices.push(
+0,
+offset+height,
+0
+);
+
+types.push(type);
+
+
+
+vertices.push(
+radius*Math.cos(a1),
+offset+height,
+radius*Math.sin(a1)
+);
+
+types.push(type);
+
+
+
+vertices.push(
+radius*Math.cos(a2),
+offset+height,
+radius*Math.sin(a2)
+);
+
+types.push(type);
+
+
+
+
+// SIDE 1
+
+
+vertices.push(
+radius*Math.cos(a1),
+offset+height,
+radius*Math.sin(a1)
+);
+
+types.push(type);
+
+
+
+vertices.push(
+radius*Math.cos(a1),
+offset-height,
+radius*Math.sin(a1)
+);
+
+types.push(type);
+
+
+
+vertices.push(
+radius*Math.cos(a2),
+offset+height,
+radius*Math.sin(a2)
+);
+
+types.push(type);
+
+
+
+
+
+// SIDE 2
+
+
+vertices.push(
+radius*Math.cos(a2),
+offset+height,
+radius*Math.sin(a2)
+);
+
+types.push(type);
+
+
+
+vertices.push(
+radius*Math.cos(a1),
+offset-height,
+radius*Math.sin(a1)
+);
+
+types.push(type);
+
+
+
+vertices.push(
+radius*Math.cos(a2),
+offset-height,
+radius*Math.sin(a2)
+);
+
+types.push(type);
+
+
+}
+
+}
+
+
+
+// LOWER BIG DISK
+
+createCylinder(
+0.45,
+0.12,
+-0.55,
+0
+);
+
+
+
+// UPPER SMALL DISK
+
+createCylinder(
+0.25,
+0.08,
+0.65,
+1
+);
+
+
+
+
+
+
+// Position Buffer
+
+
+const posBuffer=gl.createBuffer();
+
+gl.bindBuffer(
+gl.ARRAY_BUFFER,
+posBuffer
+);
+
+
+gl.bufferData(
+gl.ARRAY_BUFFER,
+new Float32Array(vertices),
+gl.STATIC_DRAW
+);
+
+
+
+const pos=
+gl.getAttribLocation(
+program,
+"position"
+);
+
+
+gl.vertexAttribPointer(
+pos,
+3,
+gl.FLOAT,
+false,
+0,
+0
+);
+
+
+gl.enableVertexAttribArray(pos);
+
+
+
+
+
+
+// Type Buffer
+
+
+const typeBuffer=gl.createBuffer();
+
+
+gl.bindBuffer(
+gl.ARRAY_BUFFER,
+typeBuffer
+);
+
+
+gl.bufferData(
+gl.ARRAY_BUFFER,
+new Float32Array(types),
+gl.STATIC_DRAW
+);
+
+
+
+const typeLoc=
+gl.getAttribLocation(
+program,
+"objType"
+);
+
+
+gl.vertexAttribPointer(
+typeLoc,
+1,
+gl.FLOAT,
+false,
+0,
+0
+);
+
+
+gl.enableVertexAttribArray(typeLoc);
+
+
+
+
+
+// Animation
+
+const angleLoc=
+gl.getUniformLocation(
+program,
+"angle"
+);
+
+
+let angle=0;
+
+
+
+function draw()
+{
+
+angle+=0.01;
+
+
+gl.viewport(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+
+
+gl.clearColor(
+0.03,
+0.05,
+0.12,
+1
+);
+
+
+gl.clear(
+gl.COLOR_BUFFER_BIT
+);
+
+
+
+gl.uniform1f(
+angleLoc,
+angle
+);
+
+
+
+gl.drawArrays(
+gl.TRIANGLES,
+0,
+vertices.length/3
+);
+
+
+
+requestAnimationFrame(draw);
+
+}
+
+
+draw();
+
+
+
+</script>
+
+
+</body>
+
+</html>
